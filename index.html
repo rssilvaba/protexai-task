@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+      svg#svgCanvas {
+        border: 1px solid black;
+        cursor: crosshair;
+      }
+      #svgCanvas circle {
+        fill: magenta;
+        stroke: yellow;
+        cursor: pointer;
+      }
+      #svgCanvas polygon,
+      #svgCanvas line {
+        @apply stroke-lime-500/70;
+        @apply fill-lime-700/30;
+        cursor: pointer;
+        stroke-width: 6px;
+      }
+      #svgCanvas .selected {
+        @apply stroke-lime-300;
+        @apply fill-lime-700/40;
+        stroke-width: 6px;
+      }
+    </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body class="h-full">
+    <div class="global-container grid h-full [grid-template-rows:auto_1fr]">
+      <div class="global header bg-slate-200">
+        <!-- this is a global header -->
+      </div>
+      <div
+        class="main-container grid [grid-template-columns:minmax(auto,320px)_6fr] overflow-auto bg-red-200"
+      >
+        <div class="side-bar grid bg-white relative pt-24">
+          <div class="overflow-hidden">
+            <!-- <div
+              id="newCameraForm"
+              class="absolute bottom-0 border flex flex-col gap-2 left-0 right-0 m-2 p-2 bg-lime-100/20"
+            >
+              <div class="flex flex-col gap-2">
+                <input
+                  class="border border-lime-600 rounded bg-white px-2 py-0.5"
+                  type="text"
+                  name="Zone"
+                  placeholder="type zone"
+                  id="zone"
+                />
+                <input
+                  class="border border-lime-600 rounded bg-white px-2 py-0.5"
+                  type="text"
+                  name="Category"
+                  placeholder="type category"
+                  id="cat"
+                />
+              </div>
+              <div class="flex self-end gap-2">
+                <button
+                  class="text-green-500 border border-transparent rounded px-2 hover:border hover:border-current"
+                >
+                  Save
+                </button>
+                <button
+                  class="text-red-500 border border-transparent rounded px-2 hover:border hover:border-current"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div> -->
+            <div
+              id="importDropArea"
+              class="fixed top-0 flex justify-between flex-row gap-2 left-0 right-0 m-2 p-2"
+            >
+              <label
+                for="file-upload"
+                class="bg-gray-600 hover:bg-gray-500 text-white p-5 rounded-full shadow-lg cursor-pointer transition-all duration-300 ease-in-out flex items-center justify-center"
+                title="Import Images"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 pointer-events-none"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+                <input id="file-upload" type="file" class="hidden" multiple />
+              </label>
+              <!-- <button
+                class="bg-green-400 hover:bg-green-300 text-white rounded-full p-5 shadow-lg cursor-pointer transition-all duration-300 ease-in-out flex items-center justify-center"
+                title="Export"
+                onclick="handleExport()"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-6 w-6 pointer-events-none -scale-y-100"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  />
+                </svg>
+              </button> -->
+            </div>
+            <div id="cameraTiles" class="flex flex-col">
+              <p class="p-4 only:block hidden">
+                No images to display, Upload some images first
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          class="content grid [grid-template-rows:auto_auto_1fr_auto] bg-yellow-200"
+        >
+          <div class="bg-lime-200">
+            <!-- <div class="flex justify-between px-8 py-4 bg-black">
+              <button
+                class="bg-gray-600 text-white font-medium min-h-8 px-4 rounded flex items-center text-sm"
+                type="button"
+              >
+                ← Prev Camera
+              </button>
+              <div
+                class="bg-gray-600 text-green-400 font-medium min-h-8 px-4 rounded-xl flex items-center text-sm"
+              >
+                ✅ All Cameras Annotated
+              </div>
+              <button
+                class="bg-gray-600 text-white font-medium min-h-8 px-4 rounded flex items-center text-sm"
+                type="button"
+              >
+                Next Camera →
+              </button>
+            </div> -->
+          </div>
+          <div class="bg-teal-200">
+            <!-- toolbar can be fixed if we want -->
+          </div>
+          <div class="bg-gray-800 overflow-auto">
+            <svg
+              id="svgCanvas"
+              class="w-full h-full bg-contain bg-no-repeat bg-center overflow"
+            >
+              <defs>
+                <marker
+                  style="overflow: visible"
+                  id="arrowhead"
+                  refX="0.0"
+                  refY="0.0"
+                  orient="auto"
+                >
+                  <path
+                    transform="rotate(180) translate(10,0)"
+                    style="
+                      fill-rule: evenodd;
+                      fill: context-stroke;
+                      stroke: context-stroke;
+                      stroke-width: 1pt;
+                    "
+                    d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+                    id="path4768"
+                  />
+                </marker>
+              </defs>
+            </svg>
+          </div>
+          <div class="bg-violet-200">
+            <!-- footer, possible navigation -->
+          </div>
+          <!-- here within the content -->
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+<script>
+  /**
+   * File input element for uploading images.
+   * @type {HTMLInputElement}
+   */
+  const uploadInput = document.getElementById("file-upload");
+
+  /**
+   * Container where the image tiles (camera views) are displayed.
+   * @type {HTMLElement}
+   */
+  const cameraTilesContainer = document.getElementById("cameraTiles");
+
+  /**
+   * Container for the selected image, styled with background-image.
+   * @type {HTMLElement}
+   */
+  const selectedImageContainer = document.getElementById("svgCanvas");
+
+  uploadInput.addEventListener("change", (event) => {
+    /**
+     * @type {File[]}
+     */
+    const files = Array.from(event.target.files);
+
+    files.forEach((file, index) => {
+      const imgURL = URL.createObjectURL(file);
+
+      // Check if this file already has a tile
+      const existingTile = Array.from(cameraTilesContainer.children).find(
+        /**
+         * @param {HTMLElement} tile
+         * @returns {boolean}
+         */
+        (tile) => tile.textContent.includes(file.name)
+      );
+
+      if (existingTile) return; // Skip duplicates
+
+      /** @type {HTMLDivElement} */
+      const tile = document.createElement("div");
+      tile.className =
+        "flex gap-2 p-2 cursor-pointer hover:bg-gray-100 rounded";
+      tile.title = file.name;
+      tile.innerHTML = `
+         <div class="self-center border min-h-10 min-w-10 p-2.5 rounded border-gray-300">
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"
+                aria-hidden="true" class="fill-green-700">
+             <path d="M34.459 1.375a2.999 2.999 0 0 0-4.149.884L13.5 28.17l-8.198-7.58a2.999 2.999 0 1 0-4.073 4.405l10.764 9.952s.309.266.452.359a2.999 2.999 0 0 0 4.15-.884L35.343 5.524a2.999 2.999 0 0 0-.884-4.149z"/>
+           </svg>
+         </div>
+         <div class="flex flex-col text-sm">
+           <p class="font-semibold text-gray-900">${file.name}</p>
+           <p class="text-gray-500">Area_${
+             cameraTilesContainer.children.length + 1
+           }</p>
+         </div>
+       `;
+
+      tile.addEventListener("click", () => {
+        // Save shapes for the currently selected image
+        if (currentImageFilename) {
+          imageShapesMap[currentImageFilename] = shapes;
+        }
+
+        // Switch image background
+        selectedImageContainer.style = `background-image: url('${imgURL}');`;
+
+        // Update filename tracker
+        currentImageFilename = file.name;
+
+        // Load existing shapes for new image or start fresh
+        shapes = imageShapesMap[currentImageFilename] || [];
+        currentShape = null;
+
+        // Update UI to highlight selected tile
+        Array.from(cameraTilesContainer.children).forEach((t) =>
+          t.classList.remove("bg-gray-200")
+        );
+        tile.classList.add("bg-gray-200");
+
+        drawShapes();
+      });
+
+      cameraTilesContainer.appendChild(tile);
+    });
+
+    // Clear input so same file can be selected again
+    uploadInput.value = "";
+  });
+</script>
+
+<script>
+  //@ts-check
+
+  const svgCanvas = /** @type {SVGSVGElement | null} */ (
+    document.getElementById("svgCanvas")
+  );
+
+  /** @type {Record<string, Shape[]>} */
+  let imageShapesMap = {}; // shapes per image
+
+  /** @type {string | null} */
+  let currentImageFilename = null;
+
+  /** @typedef {{x: number, y: number}} Point */
+  /** @typedef {"polygon" | "line"} ShapeType */
+  /**
+   * @typedef {Object} Shape
+   * @property {ShapeType} type
+   * @property {Point[]} points
+   * @property {SVGElement | null} element
+   */
+
+  /** @type {Shape[]} */
+  let shapes = [];
+
+  /** @type {Shape | null} */
+  let currentShape = null;
+
+  /** @type {number | null} */
+  let draggingPointIndex = null;
+
+  /** @type {number | null} */
+  let draggingShapeIndex = null;
+
+  /** @type {{x: number, y: number}} */
+  let lastMousePosition = { x: 0, y: 0 };
+
+  const createLineNode = (shape) => {
+    shape.type = "line";
+    shape.element = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "line"
+    );
+    const [p1, p2] = shape.points;
+    shape.element.setAttribute("x1", String(p1.x));
+    shape.element.setAttribute("y1", String(p1.y));
+    shape.element.setAttribute("x2", String(p2.x));
+    shape.element.setAttribute("y2", String(p2.y));
+    shape.element.setAttribute("marker-end", "url(#arrowhead)");
+  };
+
+  const createPolygonNode = (shape) => {
+    shape.type = "polygon";
+    shape.element = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "polygon"
+    );
+    const pointStr = shape.points.map((p) => `${p.x},${p.y}`).join(" ");
+    shape.element.setAttribute("points", pointStr);
+  };
+
+  /**
+   * Creates a new shape empty object.
+   * @returns {Shape}
+   */
+  function createShape() {
+    return {
+      type: "polygon", // default type
+      points: [],
+      element: null,
+    };
+  }
+
+  /**
+   * Redraws all shapes on the canvas.
+   * Handles polygons, lines, and draggable control points.
+   */
+  function drawShapes() {
+    [
+      ...(svgCanvas ? svgCanvas.querySelectorAll("polygon, line, circle") : []),
+    ].forEach((el) => el.remove());
+
+    shapes.forEach((shape, shapeIndex) => {
+      if (shape.points.length === 2) {
+        createLineNode(shape);
+      } else if (shape.points.length > 2) {
+        createPolygonNode(shape);
+      }
+      if (shape.element) {
+        shape.element.dataset.index = String(shapeIndex);
+      }
+
+      //While drawing:
+      // make sure the selected shape has the correct class so it is highlighted
+      // set the index of the node
+      if (shape === currentShape) {
+        shape.element?.classList.add("selected");
+      }
+
+      shape.element?.addEventListener("mousedown", (e) => {
+        draggingShapeIndex = shapeIndex;
+        const rect = svgCanvas?.getBoundingClientRect();
+        if (rect) {
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          lastMousePosition = { x, y };
+        }
+        e.stopPropagation();
+      });
+
+      shape.element?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        currentShape = shape;
+        drawShapes();
+      });
+
+      if (shape.element) {
+        svgCanvas?.appendChild(shape.element);
+      }
+
+      if (shape === currentShape) {
+        shape.points.forEach((p, i) => {
+          const circle = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "circle"
+          );
+          circle.setAttribute("cx", String(p.x));
+          circle.setAttribute("cy", String(p.y));
+          circle.setAttribute("r", "5");
+          circle.dataset.index = i.toString();
+          svgCanvas?.appendChild(circle);
+
+          circle.addEventListener("mousedown", (e) => {
+            if (circle.dataset.index !== undefined) {
+              draggingPointIndex = parseInt(circle.dataset.index);
+            }
+            e.stopPropagation();
+          });
+        });
+      }
+    });
+  }
+
+  svgCanvas?.addEventListener("mousedown", (e) => {
+    const rect = svgCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (e.button === 1) {
+      // Middle click to finish shape
+      e.preventDefault();
+      if (currentShape && currentShape.points.length > 0) {
+        currentShape = null;
+        drawShapes();
+      }
+      return;
+    }
+
+    if (e.button === 2) {
+      // Right click to undo or delete shape
+      e.preventDefault();
+      if (currentShape && currentShape.points.length > 0) {
+        currentShape.points.pop();
+      }
+      if (
+        currentShape?.points?.length === 0 &&
+        currentShape.element?.dataset.index !== undefined
+      ) {
+        const index = parseInt(currentShape.element?.dataset.index, 10);
+        if (!isNaN(index)) {
+          shapes = shapes.filter((_, i) => i !== index);
+        } else {
+          shapes.pop();
+        }
+        currentShape?.element?.remove();
+        currentShape = null;
+      }
+      drawShapes();
+      return;
+    }
+
+    if (e.button === 0) {
+      // Left click to add point
+      const targetIsCanvas = e.target === svgCanvas;
+      if (targetIsCanvas) {
+        if (!currentShape) {
+          currentShape = createShape();
+          shapes.push(currentShape);
+        }
+        currentShape.points.push({ x, y });
+        drawShapes();
+      }
+    }
+  });
+
+  svgCanvas?.addEventListener("mousemove", (e) => {
+    if (!currentShape) return;
+
+    const rect = svgCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (draggingPointIndex !== null) {
+      currentShape.points[draggingPointIndex] = { x, y };
+      drawShapes();
+    }
+
+    if (draggingShapeIndex !== null) {
+      const dx = x - lastMousePosition.x;
+      const dy = y - lastMousePosition.y;
+
+      const shape = shapes[draggingShapeIndex];
+      shape.points = shape.points.map((pt) => ({
+        x: pt.x + dx,
+        y: pt.y + dy,
+      }));
+
+      lastMousePosition = { x, y };
+      drawShapes();
+    }
+  });
+
+  svgCanvas?.addEventListener("mouseup", () => {
+    draggingPointIndex = null;
+    draggingShapeIndex = null;
+  });
+
+  svgCanvas?.addEventListener("mouseleave", () => {
+    draggingPointIndex = null;
+    draggingShapeIndex = null;
+  });
+
+  // Prevent default context menu on right-click
+  svgCanvas?.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // Delete selected shape with Delete key
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Delete" && currentShape) {
+      shapes = shapes.filter((shape) => shape !== currentShape);
+      currentShape = null;
+      drawShapes();
+    }
+  });
+
+  // TODO: handle touch events
+  // TODO: handle out of bounds dragging
+</script>
